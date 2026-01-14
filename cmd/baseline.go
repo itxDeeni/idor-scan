@@ -118,8 +118,9 @@ func (s *Scanner) testCrossUserWithBaseline(req APIRequest, attacker User, victi
 		return nil
 	}
 
-	// Try to access victim's resource with attacker's auth
-	testReq := s.buildRequest(req, attacker, victim.Params)
+	// Build request with improved ID swapping
+	// Uses attacker's auth but accesses victim's resources
+	testReq := s.buildRequestWithSwap(req, attacker, victim)
 	if testReq == nil {
 		return nil
 	}

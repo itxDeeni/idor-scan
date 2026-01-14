@@ -19,6 +19,7 @@ var (
 	proxyURL       string
 	timeoutSecs    int
 	rateLimit      int
+	workers        int
 	verbose        bool
 )
 
@@ -59,6 +60,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&proxyURL, "proxy", "p", "", "Proxy URL (e.g., http://127.0.0.1:8080 for Burp)")
 	rootCmd.Flags().IntVarP(&timeoutSecs, "timeout", "t", 30, "Request timeout in seconds")
 	rootCmd.Flags().IntVarP(&rateLimit, "rate", "r", 10, "Requests per second")
+	rootCmd.Flags().IntVarP(&workers, "workers", "w", 5, "Number of concurrent workers")
 	
 	// Config file
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .idor-scan.yaml)")
@@ -117,6 +119,24 @@ func runScan(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error parsing collection: %v\n", err)
 			os.Exit(1)
 		}
+	} else if openapiFile != "" {
+		if verbose {
+			fmt.Printf("📦 Parsing OpenAPI spec: %s\n", openapiFile)
+		}
+		requests, err = parseOpenAPISpec(openapiFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing OpenAPI spec: %v\n", err)
+			os.Exit(1)
+		}
+	} else if harFile != "" {
+		if verbose {
+			fmt.Printf("📦 Parsing HAR file: %s\n", harFile)
+		}
+		requests, err = parseHARFile(harFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing HAR file: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if verbose {
@@ -142,7 +162,13 @@ func runScan(cmd *cobra.Command, args []string) {
 	// Configure rate limit
 	scanner.SetRateLimit(rateLimit)
 	
-	findings := scanner.RunWithBaseline()
+	// Run scan (concurrent if workers > 1)
+	var findings []Finding
+	if workers > 1 {
+		findings = scanner.RunWithBaselineConcurrent(workers)
+	} else {
+		findings = scanner.RunWithBaseline()
+	}
 
 	// Output results
 	var output string

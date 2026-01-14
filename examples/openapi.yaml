@@ -1,0 +1,27 @@
+openapi: "3.0.0"
+info:
+  title: Sample API
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8888
+paths:
+  /api/users/{user_id}:
+    get:
+      operationId: getUser
+      summary: Get user profile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/users/{user_id}/orders:
+    get:
+      operationId: getUserOrders
+      summary: Get user orders
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string

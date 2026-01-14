@@ -226,6 +226,36 @@ func (s *Scanner) buildRequest(req APIRequest, user User, params map[string]stri
 	return httpReq
 }
 
+// buildRequestWithSwap creates a request using attacker's auth to access victim's resources
+// This handles both placeholder replacement AND hardcoded ID swapping
+func (s *Scanner) buildRequestWithSwap(req APIRequest, attacker User, victim User) *http.Request {
+	// Use improved ID swapping that handles hardcoded IDs
+	url := BuildSwappedURL(req.URL, attacker.Params, victim.Params)
+	body := BuildSwappedBody(req.Body, attacker.Params, victim.Params)
+
+	httpReq, err := http.NewRequest(req.Method, url, strings.NewReader(body))
+	if err != nil {
+		if verbose {
+			fmt.Printf("   ⚠️  Failed to build request: %v\n", err)
+		}
+		return nil
+	}
+
+	// Use ATTACKER's auth headers (this is the key - we're testing if attacker can access victim's data)
+	for key, val := range attacker.Headers {
+		httpReq.Header.Set(key, val)
+	}
+
+	// Add original headers (non-auth ones)
+	for key, val := range req.Headers {
+		if _, exists := attacker.Headers[key]; !exists {
+			httpReq.Header.Set(key, val)
+		}
+	}
+
+	return httpReq
+}
+
 func (s *Scanner) buildRequestNoAuth(req APIRequest) *http.Request {
 	httpReq, err := http.NewRequest(req.Method, req.URL, strings.NewReader(req.Body))
 	if err != nil {
