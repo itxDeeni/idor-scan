@@ -1,0 +1,39 @@
+# Binaries
+idor-scan
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output files
+*.out
+*.log
+*.json
+*.html
+*.pdf
+reports/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+.idor-scan.yaml
+users.json
+*.postman.json
+*.har
+
+# Go
+vendor/
+go.sum

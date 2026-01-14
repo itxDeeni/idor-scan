@@ -1,0 +1,194 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"strings"
+	"time"
+)
+
+func outputText(findings []Finding) {
+	if len(findings) == 0 {
+		fmt.Println("✅ No IDOR vulnerabilities detected")
+		return
+	}
+
+	fmt.Println("🚨 Findings:")
+	fmt.Println()
+
+	for i, f := range findings {
+		icon := "🔴"
+		if f.Severity == "HIGH" {
+			icon = "🟠"
+		} else if f.Severity == "MEDIUM" {
+			icon = "🟡"
+		}
+
+		fmt.Printf("%s [%s] %s %s\n", icon, f.Severity, f.Method, f.Endpoint)
+		fmt.Printf("   %s\n", f.Description)
+		fmt.Printf("   %s\n", f.Evidence)
+		
+		if i < len(findings)-1 {
+			fmt.Println()
+		}
+	}
+}
+
+func formatJSON(findings []Finding) string {
+	output := struct {
+		Findings  []Finding `json:"findings"`
+		Total     int       `json:"total"`
+		Timestamp string    `json:"timestamp"`
+		Version   string    `json:"version"`
+	}{
+		Findings:  findings,
+		Total:     len(findings),
+		Timestamp: time.Now().Format(time.RFC3339),
+		Version:   "0.1.0",
+	}
+
+	data, _ := json.MarshalIndent(output, "", "  ")
+	return string(data)
+}
+
+func formatHTML(findings []Finding) string {
+	critical := 0
+	high := 0
+	medium := 0
+	for _, f := range findings {
+		switch f.Severity {
+		case "CRITICAL":
+			critical++
+		case "HIGH":
+			high++
+		case "MEDIUM":
+			medium++
+		}
+	}
+
+	tmpl := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDOR-Scan Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #58a6ff; margin-bottom: 0.5rem; }
+        .subtitle { color: #8b949e; margin-bottom: 2rem; }
+        .summary { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .stat { background: #161b22; padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid #30363d; }
+        .stat-value { font-size: 2rem; font-weight: bold; }
+        .stat-label { color: #8b949e; font-size: 0.875rem; }
+        .critical .stat-value { color: #f85149; }
+        .high .stat-value { color: #db6d28; }
+        .medium .stat-value { color: #d29922; }
+        .finding { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        .finding-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .severity { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .severity-critical { background: #f8514933; color: #f85149; }
+        .severity-high { background: #db6d2833; color: #db6d28; }
+        .severity-medium { background: #d2992233; color: #d29922; }
+        .method { font-family: monospace; background: #30363d; padding: 0.25rem 0.5rem; border-radius: 4px; }
+        .endpoint { font-family: monospace; color: #58a6ff; word-break: break-all; }
+        .description { margin-bottom: 0.5rem; }
+        .evidence { color: #8b949e; font-family: monospace; font-size: 0.875rem; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #30363d; color: #8b949e; font-size: 0.875rem; }
+        a { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 IDOR-Scan Report</h1>
+        <p class="subtitle">Generated: {{.Timestamp}}</p>
+        
+        <div class="summary">
+            <div class="stat critical">
+                <div class="stat-value">{{.Critical}}</div>
+                <div class="stat-label">Critical</div>
+            </div>
+            <div class="stat high">
+                <div class="stat-value">{{.High}}</div>
+                <div class="stat-label">High</div>
+            </div>
+            <div class="stat medium">
+                <div class="stat-value">{{.Medium}}</div>
+                <div class="stat-label">Medium</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{.Total}}</div>
+                <div class="stat-label">Total Findings</div>
+            </div>
+        </div>
+
+        {{range .Findings}}
+        <div class="finding">
+            <div class="finding-header">
+                <span class="severity severity-{{.SeverityLower}}">{{.Severity}}</span>
+                <span class="method">{{.Method}}</span>
+                <span class="endpoint">{{.Endpoint}}</span>
+            </div>
+            <p class="description">{{.Description}}</p>
+            <p class="evidence">{{.Evidence}}</p>
+        </div>
+        {{end}}
+
+        {{if eq .Total 0}}
+        <div class="finding">
+            <p>✅ No IDOR vulnerabilities detected</p>
+        </div>
+        {{end}}
+
+        <div class="footer">
+            <p>Generated by <a href="https://github.com/yourusername/idor-scan">IDOR-Scan</a> v0.1.0</p>
+            <p>Need help? <a href="https://idor-scan.dev/consulting">Book an API security audit</a></p>
+        </div>
+    </div>
+</body>
+</html>`
+
+	type FindingView struct {
+		Severity      string
+		SeverityLower string
+		Method        string
+		Endpoint      string
+		Description   string
+		Evidence      string
+	}
+
+	var findingViews []FindingView
+	for _, f := range findings {
+		findingViews = append(findingViews, FindingView{
+			Severity:      f.Severity,
+			SeverityLower: strings.ToLower(f.Severity),
+			Method:        f.Method,
+			Endpoint:      f.Endpoint,
+			Description:   f.Description,
+			Evidence:      f.Evidence,
+		})
+	}
+
+	data := struct {
+		Findings  []FindingView
+		Critical  int
+		High      int
+		Medium    int
+		Total     int
+		Timestamp string
+	}{
+		Findings:  findingViews,
+		Critical:  critical,
+		High:      high,
+		Medium:    medium,
+		Total:     len(findings),
+		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	t, _ := template.New("report").Parse(tmpl)
+	var buf strings.Builder
+	t.Execute(&buf, data)
+	return buf.String()
+}
