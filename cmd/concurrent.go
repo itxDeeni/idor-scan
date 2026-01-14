@@ -41,8 +41,8 @@ func (s *Scanner) RunWithBaselineConcurrent(workers int) []Finding {
 	}
 
 	// Create job channel
-	jobs := make(chan ScanJob, len(s.Requests)*len(s.Users)*len(s.Users))
-	results := make(chan ScanResult, len(s.Requests)*len(s.Users)*len(s.Users))
+	jobs := make(chan ScanJob, 100)
+	results := make(chan ScanResult, 100)
 
 	// Start workers
 	var wg sync.WaitGroup
@@ -51,39 +51,39 @@ func (s *Scanner) RunWithBaselineConcurrent(workers int) []Finding {
 		go s.worker(jobs, results, &wg)
 	}
 
-	// Queue jobs
-	jobCount := 0
-	for _, req := range s.Requests {
-		endpoint := fmt.Sprintf("%s %s", req.Method, req.URL)
+	// Queue jobs in a separate goroutine to prevent deadlock
+	go func() {
+		for _, req := range s.Requests {
+			endpoint := fmt.Sprintf("%s %s", req.Method, req.URL)
 
-		if verbose {
-			fmt.Printf("🔍 Queuing: %s\n", endpoint)
-		}
+			if verbose {
+				fmt.Printf("🔍 Queuing: %s\n", endpoint)
+			}
 
-		for _, attacker := range s.Users {
-			for _, victim := range s.Users {
-				if attacker.Name == victim.Name {
-					continue
+			for _, attacker := range s.Users {
+				for _, victim := range s.Users {
+					if attacker.Name == victim.Name {
+						continue
+					}
+
+					baseline, ok := baselines[endpoint][victim.Name]
+					if !ok {
+						continue
+					}
+
+					jobs <- ScanJob{
+						Request:  req,
+						Attacker: attacker,
+						Victim:   victim,
+						Baseline: baseline,
+					}
 				}
-
-				baseline, ok := baselines[endpoint][victim.Name]
-				if !ok {
-					continue
-				}
-
-				jobs <- ScanJob{
-					Request:  req,
-					Attacker: attacker,
-					Victim:   victim,
-					Baseline: baseline,
-				}
-				jobCount++
 			}
 		}
-	}
-	close(jobs)
+		close(jobs)
+	}()
 
-	// Wait for workers to finish
+	// Wait for workers in a separate goroutine
 	go func() {
 		wg.Wait()
 		close(results)

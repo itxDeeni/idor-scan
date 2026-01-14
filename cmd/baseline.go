@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -30,7 +31,56 @@ func (s *Scanner) CaptureBaselines() BaselineMap {
 				fmt.Printf("📸 Baseline: %s as %s\n", endpoint, user.Name)
 			}
 
-			testReq := s.buildRequest(req, user, user.Params)
+			// Personalize request for the baseline user
+			// We try to find ANY user's ID in the URL and swap it to these user's ID
+			var testReq *http.Request
+			
+			// Try to find which user (if any) currently owns the URL params
+			var sourceUser *User
+			for _, potentialSource := range s.Users {
+				// Check if potentialSource's params match what's in the URL
+				if s.urlContainsParams(req.URL, potentialSource.Params) {
+					u := potentialSource
+					sourceUser = &u
+					break
+				}
+			}
+
+			if sourceUser != nil {
+				// We found the owner, swap to target user
+				// Use buildRequestWithSwap where "Attacker" is the target user (for Auth)
+				// and "Victim" is the target user (for Params)
+				// Wait, buildRequestWithSwap swaps FROM attacker TO victim
+				// Here we want to swap FROM sourceUser TO target user
+				
+				// We need a helper that swaps Source -> Target
+				// But reuse buildRequestWithSwap logic:
+				// It calls BuildSwappedURL(url, attacker.Params, victim.Params)
+				// ie. Replaces AttackerID with VictimID
+				
+				// So: Attacker=sourceUser, Victim=user
+				// But we need the Auth of 'user'
+				
+				url := BuildSwappedURL(req.URL, sourceUser.Params, user.Params)
+				body := BuildSwappedBody(req.Body, sourceUser.Params, user.Params)
+				testReq, _ = http.NewRequest(req.Method, url, strings.NewReader(body))
+				
+				// Add Auth headers for 'user'
+				for key, val := range user.Headers {
+					testReq.Header.Set(key, val)
+				}
+				// Add original headers
+				for key, val := range req.Headers {
+					if _, exists := user.Headers[key]; !exists {
+						testReq.Header.Set(key, val)
+					}
+				}
+			} else {
+				// No known ID found, or placeholders used
+				// Default to simple buildRequest (handles placeholders)
+				testReq = s.buildRequest(req, user, user.Params)
+			}
+
 			if testReq == nil {
 				continue
 			}
