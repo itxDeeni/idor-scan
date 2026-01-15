@@ -43,17 +43,17 @@ changelog:
 
 brews:
   - repository:
-      owner: yourusername
+      owner: itxdeeni
       name: homebrew-tap
-    homepage: https://github.com/yourusername/idor-scan
+    homepage: https://github.com/itxdeeni/idor-scan
     description: Automated IDOR & Access Control Testing for REST APIs
     license: MIT
 
 nfpms:
   - package_name: idor-scan
-    homepage: https://github.com/yourusername/idor-scan
+    homepage: https://github.com/itxdeeni/idor-scan
     description: Automated IDOR & Access Control Testing for REST APIs
-    maintainer: Your Name <you@example.com>
+    maintainer: itxdeeni <zahradeenmuazu@yahoo.com>
     license: MIT
     formats:
       - deb

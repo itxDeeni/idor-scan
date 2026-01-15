@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/yourusername/idor-scan/cmd"
+	"github.com/itxdeeni/idor-scan/cmd"
 )
 
 func main() {

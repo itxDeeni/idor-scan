@@ -1,4 +1,4 @@
-module github.com/yourusername/idor-scan
+module github.com/itxdeeni/idor-scan
 
 go 1.21
 

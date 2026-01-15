@@ -51,10 +51,10 @@ IDOR-Scan automates this entire workflow.
 curl -fsSL https://idor-scan.dev/install.sh | sh
 
 # Or with Go
-go install github.com/yourusername/idor-scan@latest
+go install github.com/itxdeeni/idor-scan@latest
 
 # Or download binary
-https://github.com/yourusername/idor-scan/releases
+https://github.com/itxdeeni/idor-scan/releases
 ```
 
 ---
@@ -179,7 +179,7 @@ We offer:
 - **Custom IDOR Rule Development** — $300–$1,000
 - **Team Training** — Security testing best practices
 
-📧 Contact: security@idor-scan.dev
+📧 Contact: zahradeenmuazu@yahoo.com
 
 ---
 
@@ -197,10 +197,10 @@ More examples in [`/examples`](./examples):
 
 - [x] Postman collection support
 - [x] Basic IDOR detection
-- [ ] OpenAPI 3.0 support
-- [ ] HAR file import
+- [x] OpenAPI 3.0 support
+- [x] HAR file import
 - [ ] GraphQL introspection
-- [ ] Rate limiting & retry logic
+- [x] Rate limiting & retry logic
 - [ ] Session management
 
 ---
@@ -235,4 +235,4 @@ If IDOR-Scan helped you find bugs or secure your APIs, consider ⭐️ starring 
 
 **Built by security researchers, for security researchers.**
 
-[Documentation](https://docs.idor-scan.dev) | [Discord](https://discord.gg/idor-scan) | [Twitter](https://x.com/idorscan)
+[Documentation](https://docs.idor-scan.dev) | [Discord](https://discord.gg/idor-scan) | [Twitter](https://x.com/itxdeeni)
